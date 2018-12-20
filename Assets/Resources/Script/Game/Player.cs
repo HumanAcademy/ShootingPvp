@@ -10,18 +10,26 @@ public class Player : MonoBehaviour
     [Range(-1f, 1f)] [SerializeField] float yp = 0f;
 
     #region 機体の情報(変数等)
+    [HideInInspector] public int maxLife = 10000;
+    [HideInInspector] public int life;
+    [HideInInspector] public float energyMax = 10000f;
+    [HideInInspector] public float energy = 0f;
+    [HideInInspector] public float energyHeel = 500f;
     Rigidbody rBody;
     #endregion
 
+    #region 消費エネルギー
+    [HideInInspector] public float trunEnergy = 1000f;
+    #endregion
+
     #region 機体のステータス
-    [HideInInspector] public int number = 1;                //プレイヤーの番号
-    [HideInInspector] public float speed = 5f;              //基本の速さ
-    [HideInInspector] public float trunMoveSpeed = 6f;      //回転時のX方向の速さ
-    [HideInInspector] public float invincibleTime = 1f;     //回転時の無敵時間
-    [HideInInspector] public int trunCount = 20;            //回転の回数 
+    [HideInInspector] public int number = 0;                //プレイヤーの番号
+    [HideInInspector] public float speed = 10f;             //基本の速さ
+    [HideInInspector] public float trunMoveSpeed = 15f;     //回転時のX方向の速さ
+    [HideInInspector] public float invincibleTime = 0.4f;   //回転時の無敵時間
+    [HideInInspector] public int trunCount = 2;             //回転の回数 
     [HideInInspector] public bool invincibleFlag = false;   //無敵かどうかの判断
-    [HideInInspector] public float moveAngle = 30f;         //移動中の角度の最大
-    [HideInInspector] public float moveAngleSpeed = 1f;     //移動中の角度の変更速度360°を回る時間
+    [HideInInspector] public float moveAngle = -20f;        //移動中の角度の最大
     #endregion
 
     #region その他
@@ -36,6 +44,7 @@ public class Player : MonoBehaviour
     void Start()
     {
         #region　初期化
+        life = maxLife;
         gCon = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
         rBody = AddRigidBody();
         defaultAngle = transform.eulerAngles;
@@ -47,6 +56,7 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        EnergyMove();
         Move();
     }
 
@@ -63,40 +73,69 @@ public class Player : MonoBehaviour
     //回転
     void TrunMove()
     {
-        if (Input.GetKeyDown(KeyCode.Return) &&
+        if (gCon.ButtonDown(AllController.AxisStr.BackTrigger,true, number) &&
+            trunCor == null||
+            gCon.ButtonDown(AllController.AxisStr.BackTrigger, false, number) &&
             trunCor == null)
         {
-            trunCor = TrunCor();
-            StartCoroutine(trunCor);
+            if(EnergyDown(trunEnergy))
+            {
+                trunCor = TrunCor(gCon.AxisGet(AllController.AxisStr.BackTrigger,number) > 0f);
+                StartCoroutine(trunCor);
+            }
         }
     }
 
     //場所移動
     void PositionMove()
     {
-        // float x = gCon.AxisGet(XBox.AxisStr.LeftJoyRight,number);
-        // float y = gCon.AxisGet(XBox.AxisStr.LeftJoyUp, number);
-        //入れ替え予定
-
-        float x = xp;
-        float y = yp;
-
-        float xPower = Mathf.Abs(x);
-        float yPower = Mathf.Abs(y);
+        float x = gCon.AxisGet(AllController.AxisStr.LeftJoyRight,number);
+        float y = -gCon.AxisGet(AllController.AxisStr.LeftJoyUp, number);
 
         Vector2 velosity =
-            new Vector2(x, y).normalized;
+            new Vector2(x, y);
 
-        velosity.x *= invincibleFlag ? trunMoveSpeed : speed * xPower;
-        velosity.y *= speed * yPower;
+        velosity.x *= invincibleFlag ? trunMoveSpeed : speed;
+        velosity.y *= speed;
 
-        if(!invincibleFlag)
-        transform.eulerAngles = NextAngle(xPower, transform.eulerAngles);
+        if (x != 0 && !invincibleFlag)
+        transform.eulerAngles = NextAngle(x * moveAngle);
 
         rBody.velocity = velosity.x * right + velosity.y * foward;
     }
     #endregion
 
+    #region エネルギー関係
+
+    //まとめ
+     void EnergyMove()
+    {
+        EnergyUp(Time.deltaTime * energyHeel);
+    }
+
+    //エネルギー回復
+    void EnergyUp(float i)
+    {
+        energy = Mathf.Clamp(energy + i, 0f, energyMax);
+    }
+
+    //エネルギー消費
+    bool EnergyDown(float i)
+    {
+        if(energy - i >= 0)
+        {
+            energy = Mathf.Clamp(energy - i, 0f, energyMax);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    #endregion
+
+    #endregion
     //RigidBodyの要素の定義
     Rigidbody AddRigidBody()
     {
@@ -111,23 +150,20 @@ public class Player : MonoBehaviour
 
     #region 旋回の回転
 
-    Vector3 NextAngle(float power,Vector3 now)
+    Vector3 NextAngle(float angle)
     {
-        float nextZ = power * moveAngle;
-        return new Vector3(now.x,now.y,Mathf.MoveTowards(now.z,nextZ,360f / moveAngleSpeed * Time.deltaTime));
+        return defaultAngle + new Vector3(0f, 0f, angle);
     }
-
-    #endregion
 
     #endregion
 
     #region コルーチン
 
     //回転(回避)
-    IEnumerator TrunCor()
+    IEnumerator TrunCor(bool flag)
     {
         //回転方向の決定
-        int axis = gCon.BoolToInt(xp > 0);
+        int axis = gCon.BoolToInt(flag);
         int count = 0;
         Vector3 angle = defaultAngle;
         invincibleFlag = true;

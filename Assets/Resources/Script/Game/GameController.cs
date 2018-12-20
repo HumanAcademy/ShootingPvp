@@ -21,6 +21,10 @@ public class GameController : AllController
     const float COLLIDER_RANGE_Z = 10f;
     #endregion
 
+    #region UI関係
+
+    #endregion
+
     // Start is called before the first frame update
     public override void Start()
     {
@@ -66,6 +70,9 @@ public class GameController : AllController
 
             go.GetComponent<MeshFilter>().mesh = meshes[PlayerPrefs.GetInt((PLAYER_MESH_PATH) + i.ToString())];
             go.transform.localScale = Vector3.one * PLAYER_SIZE;
+
+            go.name = "Player" + (i + 1).ToString();
+            go.tag = "Player" + (i + 1).ToString();
 
             go.AddComponent<Player>();
         }

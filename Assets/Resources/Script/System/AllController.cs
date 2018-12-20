@@ -8,9 +8,9 @@ using UnityEngine.SceneManagement;
 public class AllController : MonoBehaviour
 {
     #region プレイヤー関係
-    public PlayerData[] player;
-    public Mesh[] meshes;
-    public Texture[] textures;
+    [HideInInspector] public PlayerData[] player;
+    [HideInInspector] public Mesh[] meshes;
+    [HideInInspector] public Texture[] textures;
     #endregion
 
     #region パス関係(String)
@@ -20,7 +20,7 @@ public class AllController : MonoBehaviour
     public static string nextSceneName;
     public const string PAD = "Pad";
     public const string COLOR_PATH = "Model/Color";
-    public const string MESH_PATH = "Model/mesh";
+    public const string MESH_PATH = "Model/Mesh";
     public const string FOUNDATION_PATH = "Model/Foundation/Model";
     #endregion
 
@@ -115,7 +115,7 @@ public class AllController : MonoBehaviour
     {
         for (int i = 0; i < 2; i++)
         {
-            for (int j = 0; j < axis.Length - 1; j++)
+            for (int j = 0; j < axis[i].Length; j++)
             {
                 axis[i][j].flagLog = axis[i][j].flag;
                 if (Input.GetAxisRaw(axis[i][j].name) != 0f)
@@ -155,18 +155,18 @@ public class AllController : MonoBehaviour
 
     public bool ButtonDown(AxisStr button, bool Plus, int Num)
     {
-        if (Input.GetAxisRaw(axis[Num][(int)button].name) < 0f && Plus ||
-            Input.GetAxisRaw(axis[Num][(int)button].name) > 0f && !Plus ||
+        if (Input.GetAxisRaw(axis[Num][(int)button].name) > 0f && !Plus ||
+            Input.GetAxisRaw(axis[Num][(int)button].name) < 0f && Plus ||
             Input.GetAxisRaw(axis[Num][(int)button].name) == 0f)
         {
             return false;
         }
 
-        if (axis[Num][(int)button].flag == axis[Num][(int)button].flagLog)
+        if (axis[Num][(int)button].flagLog)
         {
             return false;
         }
-
+        
         return true;
     }
 
